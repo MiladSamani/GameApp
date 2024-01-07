@@ -12,7 +12,7 @@ func main() {
 
 func testUserMysqlRepo() {
 	mysqlRepo := mysql.New()
-	createdUser, err := mysqlRepo.Register(entity.User{ID: 0, PhoneNumber: "09384571370", Name: "Milad Samani"})
+	createdUser, err := mysqlRepo.Register(entity.User{ID: 0, PhoneNumber: "093", Name: "Milad Samani"})
 	if err != nil {
 		fmt.Println("can't created register user", err)
 	} else {
