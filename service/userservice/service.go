@@ -6,22 +6,25 @@ import (
 	"gameAppProject/pkg/phonenumber"
 )
 
+// Repository defines methods for user data storage.
 type Repository interface {
-	// IsPhoneNumberUnique :: For unique phone number check
+	// IsPhoneNumberUnique checks if a phone number is unique.
 	IsPhoneNumberUnique(phoneNumber string) (bool, error)
-	// Register :: Save new user in storage
+	// Register saves a new user in storage.
 	Register(u entity.User) (entity.User, error)
 }
 
-func New(repo Repository) Service {
-	return Service{repo: repo}
-}
-
+// Service provides user-related functionality.
 type Service struct {
 	repo Repository
 }
 
-// RegisterRequest :: Request for registration users
+// New creates a new Service instance with the provided repository.
+func New(repo Repository) Service {
+	return Service{repo: repo}
+}
+
+// RegisterRequest represents the request structure for user registration.
 type RegisterRequest struct {
 	Name        string
 	PhoneNumber string
@@ -32,28 +35,35 @@ type RegisterResponse struct {
 	User entity.User
 }
 
+// Register handles user registration.
+// It takes a RegisterRequest containing user information and performs the following steps:
+// 1. Validates the phone number using the IsValid function from the phonenumber package.
+// 2. Checks the uniqueness of the phone number by calling the IsPhoneNumberUnique method on the repository.
+// 3. Validates the length of the user's name.
+// 4. Creates a new user entity and calls the repository's Register method to save the user.
+// 5. Returns a RegisterResponse containing the created user or an error if any validation or registration step fails.
 func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
-	//TODO :: We should verify phone number by verification code
+	// TODO: Verify phone number by verification code
 
-	// Validate phone number
+	// Step 1: Validate phone number
 	if !phonenumber.IsValid(req.PhoneNumber) {
 		return RegisterResponse{}, fmt.Errorf("phone number is not valid")
 	}
-	// Check uniqueness phone number :: Just one number on DB :: shorthand if for err scope!
+
+	// Step 2: Check uniqueness of phone number
 	if isUnique, err := s.repo.IsPhoneNumberUnique(req.PhoneNumber); err != nil || !isUnique {
 		if err != nil {
-			return RegisterResponse{}, fmt.Errorf("unexpexted error %w", err)
+			return RegisterResponse{}, fmt.Errorf("unexpected error %w", err)
 		}
-		if !isUnique {
-			return RegisterResponse{}, fmt.Errorf("phone number is not unique")
-		}
+		return RegisterResponse{}, fmt.Errorf("phone number is not unique")
 	}
 
-	// Validate name
+	// Step 3: Validate name
 	if len(req.Name) < 3 {
 		return RegisterResponse{}, fmt.Errorf("name length should be greater than 3")
 	}
-	// Create new user in storage
+
+	// Step 4: Create new user in storage
 	user := entity.User{
 		ID:          0,
 		Name:        req.Name,
@@ -61,9 +71,9 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 	}
 	createdUser, err := s.repo.Register(user)
 	if err != nil {
-		return RegisterResponse{}, fmt.Errorf("unexpexted error %w", err)
+		return RegisterResponse{}, fmt.Errorf("unexpected error %w", err)
 	}
 
-	// Return created user
+	// Step 5: Return created user
 	return RegisterResponse{User: createdUser}, nil
 }
