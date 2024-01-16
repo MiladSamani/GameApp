@@ -26,8 +26,8 @@ func New(repo Repository) Service {
 
 // RegisterRequest represents the request structure for user registration.
 type RegisterRequest struct {
-	Name        string
-	PhoneNumber string
+	Name        string `json:"name"`
+	PhoneNumber string `json:"phone_number"`
 }
 
 // RegisterResponse :: Response for registration users :: get phone and number and pass to register function
