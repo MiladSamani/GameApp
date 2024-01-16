@@ -17,6 +17,7 @@ func main() {
 	// Define endpoints and their corresponding handler functions
 	mux.HandleFunc("/health-check", healthCheckHandler)
 	mux.HandleFunc("/users/register", userRegisterHandler)
+	mux.HandleFunc("/users/login", userLoginHandler)
 
 	// Create an HTTP server listening on port 8080 with the defined ServeMux
 	server := http.Server{Addr: ":8080", Handler: mux}
@@ -65,6 +66,43 @@ func userRegisterHandler(writer http.ResponseWriter, req *http.Request) {
 
 	// Respond with a success message if user registration is successful
 	writer.Write([]byte(`{"message": "user created"}`))
+}
+
+func userLoginHandler(writer http.ResponseWriter, req *http.Request) {
+	// Check if the request method is POST, respond with an error if not
+	if req.Method != http.MethodPost {
+		fmt.Fprintf(writer, `{"error": "invalid method"}`)
+		return
+	}
+
+	// Read the request body
+	data, err := io.ReadAll(req.Body)
+	if err != nil {
+		// Respond with an error if there's an issue reading the request body
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+
+	// Decode JSON request body into a RegisterRequest struct
+	var lReq userservice.LoginRequest
+	err = json.Unmarshal(data, &lReq)
+	if err != nil {
+		// Respond with an error if there's an issue decoding JSON
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+	// Initialize MySQL repository and user service
+	mysqlRepo := mysql.New()
+	userSvc := userservice.New(mysqlRepo)
+
+	// Attempt to register the user
+	_, err = userSvc.Login(lReq)
+	if err != nil {
+		// Respond with an error if user registration fails
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+	writer.Write([]byte(`{"message" : "user credential is ok"`))
 }
 
 // healthCheckHandler handles health check requests.

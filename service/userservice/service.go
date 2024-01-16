@@ -10,10 +10,23 @@ import (
 
 // Repository defines methods for user data storage.
 type Repository interface {
-	// IsPhoneNumberUnique checks if a phone number is unique.
+	// IsPhoneNumberUnique checks if a phone number is unique in the storage.
+	// It takes a phone number as a parameter and returns a boolean indicating
+	// whether the phone number is unique. If an error occurs during the check,
+	// it is returned as the second value.
 	IsPhoneNumberUnique(phoneNumber string) (bool, error)
+
 	// Register saves a new user in storage.
+	// It takes a user entity as a parameter and returns the created user entity.
+	// If an error occurs during the registration process, it is returned as the second value.
 	Register(u entity.User) (entity.User, error)
+
+	// GetUserByPhoneNumber retrieves a user by their phone number from the storage.
+	// It takes a phone number as a parameter and returns the corresponding user entity.
+	// If the user is not found, it returns nil as the first value and an error
+	// indicating the absence of the user as the second value.
+	// If an error occurs during the retrieval process, it is returned as the second value.
+	GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error)
 }
 
 // Service provides user-related functionality.
@@ -91,6 +104,35 @@ func (s Service) Register(req RegisterRequest) (RegisterResponse, error) {
 
 	// Step 7: Return the created user
 	return RegisterResponse{User: createdUser}, nil
+}
+
+// LoginRequest represents the data structure for user login requests.
+// It contains the user's phone number and password for authentication.
+type LoginRequest struct {
+	PhoneNumber string `json:"phone_number"` // PhoneNumber is the user's phone number used for login.
+	Password    string `json:"password"`     // Password is the user's password used for authentication.
+}
+
+// LoginResponse represents the data structure for user login responses.
+// It currently does not contain any specific fields, but it can be extended
+// with relevant information about the user's login status or additional details.
+type LoginResponse struct {
+}
+
+func (s Service) Login(req LoginRequest) (LoginResponse, error) {
+	//ToDo : it would be better to use two separate method for existence check and getUserByPhonenumber
+	user, exist, err := s.repo.GetUserByPhoneNumber(req.PhoneNumber)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("unexpected error %w", err)
+	}
+
+	if !exist {
+		return LoginResponse{}, fmt.Errorf("username or password isn't correct")
+	}
+	if user.Password != getMD5Hash(req.Password) {
+		return LoginResponse{}, fmt.Errorf("username or password isn't correct")
+	}
+	return LoginResponse{}, nil
 }
 
 // getMD5Hash computes the MD5 hash of the input text and returns the hexadecimal representation.
