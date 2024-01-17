@@ -10,6 +10,10 @@ import (
 	"net/http"
 )
 
+const (
+	JwtSignKey = "jwt_secret"
+)
+
 func main() {
 	// Create a new ServeMux to handle different routes
 	mux := http.NewServeMux()
@@ -18,6 +22,7 @@ func main() {
 	mux.HandleFunc("/health-check", healthCheckHandler)
 	mux.HandleFunc("/users/register", userRegisterHandler)
 	mux.HandleFunc("/users/login", userLoginHandler)
+	mux.HandleFunc("/users/profile", userProfileHandler)
 
 	// Create an HTTP server listening on port 8080 with the defined ServeMux
 	server := http.Server{Addr: ":8080", Handler: mux}
@@ -54,7 +59,7 @@ func userRegisterHandler(writer http.ResponseWriter, req *http.Request) {
 
 	// Initialize MySQL repository and user service
 	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo)
+	userSvc := userservice.New(mysqlRepo, JwtSignKey)
 
 	// Attempt to register the user
 	_, err = userSvc.Register(uReq)
@@ -93,16 +98,59 @@ func userLoginHandler(writer http.ResponseWriter, req *http.Request) {
 	}
 	// Initialize MySQL repository and user service
 	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo)
+	userSvc := userservice.New(mysqlRepo, JwtSignKey)
 
 	// Attempt to register the user
-	_, err = userSvc.Login(lReq)
+	resp, err := userSvc.Login(lReq)
 	if err != nil {
 		// Respond with an error if user registration fails
 		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
 		return
 	}
-	writer.Write([]byte(`{"message" : "user credential is ok"`))
+	data, err = json.Marshal(resp)
+	if err != nil {
+		writer.Write([]byte(fmt.Sprintf(`{"error" : "%s"}`, err.Error())))
+		return
+	}
+	writer.Write(data)
+}
+
+func userProfileHandler(writer http.ResponseWriter, req *http.Request) {
+	// Check if the request method is GET, respond with an error if not
+	if req.Method != http.MethodGet {
+		fmt.Fprintf(writer, `{"error": "invalid method"}`)
+		return
+	}
+	pReq := userservice.ProfileRequest{UserID: 0}
+	// Read the request body
+	data, err := io.ReadAll(req.Body)
+	if err != nil {
+		// Respond with an error if there's an issue reading the request body
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+
+	// Decode JSON request body into a RegisterRequest struct
+	err = json.Unmarshal(data, &pReq)
+	if err != nil {
+		// Respond with an error if there's an issue decoding JSON
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+	mysqlRepo := mysql.New()
+	userSvc := userservice.New(mysqlRepo, JwtSignKey)
+	resp, err := userSvc.Profile(pReq)
+	if err != nil {
+		// Respond with an error if user registration fails
+		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		return
+	}
+	data, err = json.Marshal(resp)
+	if err != nil {
+		writer.Write([]byte(fmt.Sprintf(`{"error" : "%s"}`, err.Error())))
+		return
+	}
+	writer.Write(data)
 }
 
 // healthCheckHandler handles health check requests.

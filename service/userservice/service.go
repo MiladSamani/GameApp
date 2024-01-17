@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"gameAppProject/entity"
 	"gameAppProject/pkg/phonenumber"
+	jwt "github.com/golang-jwt/jwt/v4"
+	"time"
 )
 
 // Repository defines methods for user data storage.
@@ -26,17 +28,21 @@ type Repository interface {
 	// If the user is not found, it returns nil as the first value and an error
 	// indicating the absence of the user as the second value.
 	// If an error occurs during the retrieval process, it is returned as the second value.
+
 	GetUserByPhoneNumber(phoneNumber string) (entity.User, bool, error)
+	// GetUserByID comment
+	GetUserByID(userID uint) (entity.User, error)
 }
 
 // Service provides user-related functionality.
 type Service struct {
-	repo Repository
+	signKey string
+	repo    Repository
 }
 
 // New creates a new Service instance with the provided repository.
-func New(repo Repository) Service {
-	return Service{repo: repo}
+func New(repo Repository, signKey string) Service {
+	return Service{repo: repo, signKey: signKey}
 }
 
 // RegisterRequest represents the request structure for user registration.
@@ -117,22 +123,30 @@ type LoginRequest struct {
 // It currently does not contain any specific fields, but it can be extended
 // with relevant information about the user's login status or additional details.
 type LoginResponse struct {
+	AccessToken string `json:"access_token"`
 }
 
 func (s Service) Login(req LoginRequest) (LoginResponse, error) {
-	//ToDo : it would be better to use two separate method for existence check and getUserByPhonenumber
+	// TODO - it would be better to user two separate method for existence check and getUserByPhoneNumber
 	user, exist, err := s.repo.GetUserByPhoneNumber(req.PhoneNumber)
 	if err != nil {
-		return LoginResponse{}, fmt.Errorf("unexpected error %w", err)
+		return LoginResponse{}, fmt.Errorf("unexpected error: %w", err)
 	}
 
 	if !exist {
 		return LoginResponse{}, fmt.Errorf("username or password isn't correct")
 	}
+
 	if user.Password != getMD5Hash(req.Password) {
 		return LoginResponse{}, fmt.Errorf("username or password isn't correct")
 	}
-	return LoginResponse{}, nil
+
+	token, err := createToken(user.ID, s.signKey)
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("unexpected error: %w", err)
+	}
+
+	return LoginResponse{AccessToken: token}, nil
 }
 
 // getMD5Hash computes the MD5 hash of the input text and returns the hexadecimal representation.
@@ -146,4 +160,56 @@ func (s Service) Login(req LoginRequest) (LoginResponse, error) {
 func getMD5Hash(text string) string {
 	hash := md5.Sum([]byte(text))
 	return hex.EncodeToString(hash[:])
+}
+
+type ProfileRequest struct {
+	UserID uint
+}
+
+type ProfileResponse struct {
+	Name string `json:"name"`
+}
+
+// All request inputs for service should be sanitized.
+
+func (s Service) Profile(req ProfileRequest) (ProfileResponse, error) {
+	//getUserByID
+	user, err := s.repo.GetUserByID(req.UserID)
+	// I don't expect the repository call return "record not found" , because I assume the service input is sanitized.
+	//ToDo : we can use rich error
+	if err != nil {
+		return ProfileResponse{}, fmt.Errorf("unexpected error %w", err)
+	}
+	return ProfileResponse{Name: user.Name}, nil
+
+}
+
+type Claims struct {
+	RegisteredClaims jwt.RegisteredClaims
+	UserID           uint
+}
+
+func (c Claims) Valid() error {
+	return nil
+}
+
+func createToken(userID uint, signKey string) (string, error) {
+	// create a signer for rsa 256
+	// TODO - replace with rsa 256 RS256 - https://github.com/golang-jwt/jwt/blob/main/http_example_test.go
+
+	// set our claims
+	claims := Claims{
+		RegisteredClaims: jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour * 24 * 7)),
+		},
+		UserID: userID,
+	}
+
+	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	tokenString, err := accessToken.SignedString([]byte(signKey))
+	if err != nil {
+		return "", err
+	}
+
+	return tokenString, nil
 }
