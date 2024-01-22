@@ -4,157 +4,161 @@ import (
 	"encoding/json"
 	"fmt"
 	"gameAppProject/repository/mysql"
+	"gameAppProject/service/authservice"
 	"gameAppProject/service/userservice"
 	"io"
 	"log"
 	"net/http"
+	"time"
 )
 
 const (
-	JwtSignKey = "jwt_secret"
+	JwtSignKey                 = "jwt_secret"
+	AccessTokenSubject         = "ac"
+	RefreshTokenSubject        = "rt"
+	AccessTokenExpireDuration  = time.Hour * 24
+	RefreshTokenExpireDuration = time.Hour * 24 * 7
 )
 
 func main() {
-	// Create a new ServeMux to handle different routes
 	mux := http.NewServeMux()
-
-	// Define endpoints and their corresponding handler functions
 	mux.HandleFunc("/health-check", healthCheckHandler)
 	mux.HandleFunc("/users/register", userRegisterHandler)
 	mux.HandleFunc("/users/login", userLoginHandler)
 	mux.HandleFunc("/users/profile", userProfileHandler)
 
-	// Create an HTTP server listening on port 8080 with the defined ServeMux
-	server := http.Server{Addr: ":8080", Handler: mux}
-
-	// Start the server and log any errors
-	log.Println("server is listening on port 8080...")
+	log.Println("server is listening on port 8088...")
+	server := http.Server{Addr: ":8088", Handler: mux}
 	log.Fatal(server.ListenAndServe())
 }
 
-// userRegisterHandler handles user registration requests.
 func userRegisterHandler(writer http.ResponseWriter, req *http.Request) {
-	// Check if the request method is POST, respond with an error if not
 	if req.Method != http.MethodPost {
 		fmt.Fprintf(writer, `{"error": "invalid method"}`)
-		return
 	}
 
-	// Read the request body
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
-		// Respond with an error if there's an issue reading the request body
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
 	}
 
-	// Decode JSON request body into a RegisterRequest struct
 	var uReq userservice.RegisterRequest
 	err = json.Unmarshal(data, &uReq)
 	if err != nil {
-		// Respond with an error if there's an issue decoding JSON
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
 		return
 	}
 
-	// Initialize MySQL repository and user service
-	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo, JwtSignKey)
+	authSvc := authservice.New(JwtSignKey, AccessTokenSubject, RefreshTokenSubject,
+		AccessTokenExpireDuration, RefreshTokenExpireDuration)
 
-	// Attempt to register the user
+	mysqlRepo := mysql.New()
+	userSvc := userservice.New(authSvc, mysqlRepo)
+
 	_, err = userSvc.Register(uReq)
 	if err != nil {
-		// Respond with an error if user registration fails
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
 		return
 	}
 
-	// Respond with a success message if user registration is successful
 	writer.Write([]byte(`{"message": "user created"}`))
 }
 
+func healthCheckHandler(writer http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(writer, `{"message": "everything is good!"}`)
+}
+
 func userLoginHandler(writer http.ResponseWriter, req *http.Request) {
-	// Check if the request method is POST, respond with an error if not
 	if req.Method != http.MethodPost {
 		fmt.Fprintf(writer, `{"error": "invalid method"}`)
-		return
 	}
 
-	// Read the request body
 	data, err := io.ReadAll(req.Body)
 	if err != nil {
-		// Respond with an error if there's an issue reading the request body
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
 	}
 
-	// Decode JSON request body into a RegisterRequest struct
 	var lReq userservice.LoginRequest
 	err = json.Unmarshal(data, &lReq)
 	if err != nil {
-		// Respond with an error if there's an issue decoding JSON
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
 		return
 	}
-	// Initialize MySQL repository and user service
-	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo, JwtSignKey)
 
-	// Attempt to register the user
+	authSvc := authservice.New(JwtSignKey, AccessTokenSubject, RefreshTokenSubject,
+		AccessTokenExpireDuration, RefreshTokenExpireDuration)
+
+	mysqlRepo := mysql.New()
+	userSvc := userservice.New(authSvc, mysqlRepo)
+
 	resp, err := userSvc.Login(lReq)
 	if err != nil {
-		// Respond with an error if user registration fails
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
 		return
 	}
+
 	data, err = json.Marshal(resp)
 	if err != nil {
-		writer.Write([]byte(fmt.Sprintf(`{"error" : "%s"}`, err.Error())))
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
 		return
 	}
+
 	writer.Write(data)
 }
 
 func userProfileHandler(writer http.ResponseWriter, req *http.Request) {
-	// Check if the request method is GET, respond with an error if not
 	if req.Method != http.MethodGet {
 		fmt.Fprintf(writer, `{"error": "invalid method"}`)
-		return
-	}
-	pReq := userservice.ProfileRequest{UserID: 0}
-	// Read the request body
-	data, err := io.ReadAll(req.Body)
-	if err != nil {
-		// Respond with an error if there's an issue reading the request body
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
 	}
 
-	// Decode JSON request body into a RegisterRequest struct
-	err = json.Unmarshal(data, &pReq)
+	authSvc := authservice.New(JwtSignKey, AccessTokenSubject, RefreshTokenSubject,
+		AccessTokenExpireDuration, RefreshTokenExpireDuration)
+
+	authToken := req.Header.Get("Authorization")
+	claims, err := authSvc.ParseToken(authToken)
 	if err != nil {
-		// Respond with an error if there's an issue decoding JSON
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
+		fmt.Fprintf(writer, `{"error": "token is not valid"}`)
 	}
+
 	mysqlRepo := mysql.New()
-	userSvc := userservice.New(mysqlRepo, JwtSignKey)
-	resp, err := userSvc.Profile(pReq)
-	if err != nil {
-		// Respond with an error if user registration fails
-		writer.Write([]byte(fmt.Sprintf(`{"error": "%s"}`, err.Error())))
-		return
-	}
-	data, err = json.Marshal(resp)
-	if err != nil {
-		writer.Write([]byte(fmt.Sprintf(`{"error" : "%s"}`, err.Error())))
-		return
-	}
-	writer.Write(data)
-}
+	userSvc := userservice.New(authSvc, mysqlRepo)
 
-// healthCheckHandler handles health check requests.
-func healthCheckHandler(writer http.ResponseWriter, req *http.Request) {
-	// Respond with a JSON message indicating that everything is good
-	fmt.Fprintf(writer, `{"message": "everything is good!"}`)
+	resp, err := userSvc.Profile(userservice.ProfileRequest{UserID: claims.UserID})
+	if err != nil {
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
+		return
+	}
+
+	data, err := json.Marshal(resp)
+	if err != nil {
+		writer.Write([]byte(
+			fmt.Sprintf(`{"error": "%s"}`, err.Error()),
+		))
+
+		return
+	}
+
+	writer.Write(data)
 }
