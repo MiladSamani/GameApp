@@ -35,3 +35,6 @@ func New(config Config) *MySQLDB {
 }
 
 //"mysql", "gameapp:gameapp@(127.0.0.1:3306)/gameapp_db"
+//sql-migrate up -env="production" -config=dbconfig.yml
+//sql-migrate status -env="production" -config=dbconfig.yml
+//sql-migrate down -env="production" -config=dbconfig.yml -limit=1
