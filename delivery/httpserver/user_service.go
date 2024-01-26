@@ -1,7 +1,7 @@
 package httpserver
 
 import (
-	"fmt"
+	"gameAppProject/pkg/httpmsg"
 	"gameAppProject/service/userservice"
 	"github.com/labstack/echo/v4"
 	"net/http"
@@ -36,7 +36,6 @@ func (s Server) userRegister(c echo.Context) error {
 }
 
 func (s Server) userProfile(c echo.Context) error {
-	fmt.Println("c.GetAuthorization", c.Get("Authorization"))
 	authToken := c.Request().Header.Get("Authorization")
 	claims, err := s.authSvc.ParseToken(authToken)
 	if err != nil {
@@ -45,7 +44,8 @@ func (s Server) userProfile(c echo.Context) error {
 
 	resp, err := s.userSvc.Profile(userservice.ProfileRequest{UserID: claims.UserID})
 	if err != nil {
-		return echo.NewHTTPError(http.StatusBadRequest, err.Error())
+		msg, code := httpmsg.Error(err)
+		return echo.NewHTTPError(code, msg)
 	}
 
 	return c.JSON(http.StatusOK, resp)
