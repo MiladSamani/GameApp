@@ -1,14 +1,14 @@
 package userhandler
 
 import (
-	"gameAppProject/dto"
+	"gameAppProject/param"
 	"gameAppProject/pkg/httpmsg"
 	"github.com/labstack/echo/v4"
 	"net/http"
 )
 
 func (h Handler) userLogin(c echo.Context) error {
-	var req dto.LoginRequest
+	var req param.LoginRequest
 	if err := c.Bind(&req); err != nil {
 		return echo.NewHTTPError(http.StatusBadRequest)
 	}
