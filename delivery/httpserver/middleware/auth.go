@@ -1,7 +1,7 @@
 package middleware
 
 import (
-	"gameAppProject/pkg/constant"
+	cfg "gameAppProject/config"
 	"gameAppProject/service/authservice"
 	mw "github.com/labstack/echo-jwt/v4"
 	"github.com/labstack/echo/v4"
@@ -9,7 +9,7 @@ import (
 
 func Auth(service authservice.Service, config authservice.Config) echo.MiddlewareFunc {
 	return mw.WithConfig(mw.Config{
-		ContextKey: constant.AuthMiddlewareContextKey,
+		ContextKey: cfg.AuthMiddlewareContextKey,
 		SigningKey: []byte(config.SignKey),
 		// TODO - as sign method string to config...
 		SigningMethod: "HS256",
