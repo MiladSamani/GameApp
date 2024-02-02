@@ -6,4 +6,5 @@ type User struct {
 	PhoneNumber string // User's phone number.
 	Name        string // User's name.
 	Password    string //User's always keep hashed password.
+	Role        Role
 }

@@ -36,7 +36,7 @@ func main() {
 		Mysql: mysql.Config{
 			Username: "gameapp",
 			Password: "gameapp",
-			Port:     3306,
+			Port:     3308,
 			Host:     "localhost",
 			DBName:   "gameapp_db",
 		},
