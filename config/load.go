@@ -6,6 +6,7 @@ import (
 	"github.com/knadh/koanf/providers/env"
 	"github.com/knadh/koanf/providers/file"
 	"github.com/knadh/koanf/v2"
+	_ "github.com/knadh/koanf/v2"
 	"strings"
 )
 
@@ -22,8 +23,13 @@ func Load(configPath string) *Config {
 	k.Load(file.Provider(configPath), yaml.Parser())
 
 	k.Load(env.Provider("GAMEAPP_", ".", func(s string) string {
-		return strings.Replace(strings.ToLower(
+		str := strings.Replace(strings.ToLower(
 			strings.TrimPrefix(s, "GAMEAPP_")), "_", ".", -1)
+
+		// TODO - this is just a workaround
+		// for multiword items such as "sign_key" that we should use like "GAMEAPP_AUTH_SIGN__KEY"
+		// find a better solution if needed..
+		return strings.Replace(str, "..", "_", -1)
 	}), nil)
 
 	var cfg Config
