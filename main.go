@@ -36,13 +36,12 @@ func main() {
 		Mysql: mysql.Config{
 			Username: "gameapp",
 			Password: "gameapp",
-			Port:     3308,
+			Port:     3306,
 			Host:     "localhost",
 			DBName:   "gameapp_db",
 		},
 	}
 
-	// TODO - add command for migrations
 	//mgr := migrator.New(cfg.Mysql)
 	//mgr.Up()
 

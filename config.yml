@@ -4,6 +4,6 @@ auth:
   sign_key: hello
 
 mysql:
-  port: 3308
+  port: 3306
   host: localhost
   db_name: gameapp_db

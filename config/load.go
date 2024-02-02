@@ -20,7 +20,7 @@ func Load(configPath string) *Config {
 	k.Load(confmap.Provider(defaultConfig, "."), nil)
 
 	// Load YAML config and merge into the previously loaded config (because we can).
-	k.Load(file.Provider(configPath), yaml.Parser())
+	k.Load(file.Provider("config.yml"), yaml.Parser())
 
 	k.Load(env.Provider("GAMEAPP_", ".", func(s string) string {
 		str := strings.Replace(strings.ToLower(
