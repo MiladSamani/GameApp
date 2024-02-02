@@ -16,7 +16,7 @@ func Error(err error) (message string, code int) {
 
 		// we should not expose unexpected error messages
 		if code >= 500 {
-			msg = errmsg.SomethingWentWrong
+			msg = errmsg.ErrorMsgSomethingWentWrong
 		}
 
 		return msg, code
