@@ -13,7 +13,6 @@ import (
 	"gameAppProject/service/userservice"
 	"gameAppProject/validator/matchingvalidator"
 	"gameAppProject/validator/uservalidator"
-
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -23,6 +22,7 @@ type Server struct {
 	userHandler           userhandler.Handler
 	backofficeUserHandler backofficeuserhandler.Handler
 	matchingHandler       matchinghandler.Handler
+	Router                *echo.Echo
 }
 
 func New(config config.Config, authSvc authservice.Service, userSvc userservice.Service,
@@ -31,6 +31,7 @@ func New(config config.Config, authSvc authservice.Service, userSvc userservice.
 	matchingSvc matchingservice.Service,
 	matchingValidator matchingvalidator.Validator) Server {
 	return Server{
+		Router:                echo.New(),
 		config:                config,
 		userHandler:           userhandler.New(config.Auth, authSvc, userSvc, userValidator),
 		backofficeUserHandler: backofficeuserhandler.New(config.Auth, authSvc, backofficeUserSvc, authorizationSvc),
@@ -39,21 +40,19 @@ func New(config config.Config, authSvc authservice.Service, userSvc userservice.
 }
 
 func (s Server) Serve() {
-	e := echo.New()
-
 	// Middleware
-	e.Use(middleware.Logger())
-	e.Use(middleware.Recover())
+	s.Router.Use(middleware.Logger())
+	s.Router.Use(middleware.Recover())
 
 	// Routes
-	e.GET("/health-check", s.healthCheck)
+	s.Router.GET("/health-check", s.healthCheck)
 
-	s.userHandler.SetRoutes(e)
-	s.backofficeUserHandler.SetRoutes(e)
-	s.matchingHandler.SetRoutes(e)
+	s.userHandler.SetRoutes(s.Router)
+	s.backofficeUserHandler.SetRoutes(s.Router)
+	s.matchingHandler.SetRoutes(s.Router)
 
 	// Start server
 	address := fmt.Sprintf(":%d", s.config.HTTPServer.Port)
 	fmt.Printf("start echo server on %s\n", address)
-	e.Logger.Fatal(e.Start(address))
+	s.Router.Logger.Fatal(s.Router.Start(address))
 }
