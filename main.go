@@ -21,6 +21,7 @@ import (
 	"gameAppProject/validator/uservalidator"
 	"os"
 	"os/signal"
+	"sync"
 	"time"
 )
 
@@ -46,10 +47,12 @@ func main() {
 	}()
 
 	done := make(chan bool)
-
+	var wg sync.WaitGroup
 	go func() {
-		sch := scheduler.New()
-		sch.Start(done)
+		sch := scheduler.New(matchingSvc)
+
+		wg.Add(1)
+		sch.Start(done, &wg)
 	}()
 
 	quit := make(chan os.Signal, 1)
@@ -68,8 +71,10 @@ func main() {
 	done <- true
 	time.Sleep(cfg.Application.GracefulShutdownTimeout)
 
-	// TODO - the context doesn't wait for scheduler to finish its job..
+	// TODO - does order of ctx.Done & wg.Wait matter?
 	<-ctxWithTimeout.Done()
+
+	wg.Wait()
 }
 
 func setupServices(cfg config.Config) (

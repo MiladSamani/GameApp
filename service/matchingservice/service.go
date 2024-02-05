@@ -1,12 +1,12 @@
 package matchingservice
 
 import (
+	"fmt"
 	"gameAppProject/entity"
 	"gameAppProject/param"
 	"gameAppProject/pkg/richerror"
 	"time"
 )
-
 
 type Repo interface {
 	AddToWaitingList(userID uint, category entity.Category) error
@@ -25,7 +25,8 @@ func New(config Config, repo Repo) Service {
 	return Service{config: config, repo: repo}
 }
 
-func (s Service) AddToWaitingList(req param.AddToWaitingListRequest) (param.AddToWaitingListResponse, error) {
+func (s Service) AddToWaitingList(req param.AddToWaitingListRequest) (
+	param.AddToWaitingListResponse, error) {
 	const op = richerror.Op("matchingservice.AddToWaitingList")
 
 	// add user to the waiting list for the given category if not exist
@@ -36,4 +37,9 @@ func (s Service) AddToWaitingList(req param.AddToWaitingListRequest) (param.AddT
 	}
 
 	return param.AddToWaitingListResponse{Timeout: s.config.WaitingTimeout}, nil
+}
+
+func (s Service) MatchWaitedUsers(req param.MatchWaitedUsersRequest) (param.MatchWaitedUsersResponse, error) {
+	fmt.Println("MatchWaitedUsers", time.Now())
+	return param.MatchWaitedUsersResponse{}, nil
 }
