@@ -18,7 +18,6 @@ import (
 	"gameAppProject/service/userservice"
 	"gameAppProject/validator/matchingvalidator"
 	"gameAppProject/validator/uservalidator"
-	"github.com/labstack/echo/v4"
 	"os"
 	"os/signal"
 )
@@ -39,11 +38,9 @@ func main() {
 	// TODO - add struct and add these returned items as struct field
 	authSvc, userSvc, userValidator, backofficeSvc, authorizationSvc, matchingSvc, matchingV := setupServices(cfg)
 
-	var httpServer *echo.Echo
+	server := httpserver.New(cfg, authSvc, userSvc, userValidator, backofficeSvc, authorizationSvc, matchingSvc, matchingV)
 	go func() {
-		server := httpserver.New(cfg, authSvc, userSvc, userValidator, backofficeSvc, authorizationSvc, matchingSvc, matchingV)
-
-		httpServer = server.Serve()
+		server.Serve()
 	}()
 
 	quit := make(chan os.Signal, 1)
@@ -54,7 +51,7 @@ func main() {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, cfg.Application.GracefulShutdownTimeout)
 	defer cancel()
 
-	if err := httpServer.Shutdown(ctxWithTimeout); err != nil {
+	if err := server.Router.Shutdown(ctxWithTimeout); err != nil {
 		fmt.Println("http server shutdown error", err)
 	}
 

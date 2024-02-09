@@ -3,8 +3,10 @@ package config
 import (
 	"gameAppProject/adapter/redis"
 	"gameAppProject/repository/mysql"
+	"gameAppProject/scheduler"
 	"gameAppProject/service/authservice"
 	"gameAppProject/service/matchingservice"
+	"gameAppProject/service/presenceservice"
 	"time"
 )
 
@@ -23,4 +25,6 @@ type Config struct {
 	Mysql           mysql.Config           `koanf:"mysql"`
 	MatchingService matchingservice.Config `koanf:"matching_service"`
 	Redis           redis.Config           `koanf:"redis"`
+	PresenceService presenceservice.Config `koanf:"presence_service"`
+	Scheduler       scheduler.Config       `koanf:"scheduler"`
 }
