@@ -103,12 +103,13 @@ func setupServices(cfg config.Config) (
 	matchingV := matchingvalidator.New()
 
 	redisAdapter := redis.New(cfg.Redis)
-	matchingRepo := redismatching.New(redisAdapter)
-	// TODO - panic - replace nil with presence client
-	matchingSvc := matchingservice.New(cfg.MatchingService, matchingRepo, nil)
 
 	presenceRepo := redispresence.New(redisAdapter)
 	presenceSvc := presenceservice.New(cfg.PresenceService, presenceRepo)
+
+	matchingRepo := redismatching.New(redisAdapter)
+	// TODO - panic - replace presenceSvc with presence grpc client
+	matchingSvc := matchingservice.New(cfg.MatchingService, matchingRepo, presenceSvc)
 
 	return authSvc, userSvc, uV, backofficeUserSvc, authorizationSvc, matchingSvc, matchingV, presenceSvc
 }
